@@ -4,4 +4,4 @@ This app is a Reimann Sum calculator. It has been done in collaboration with the
 
 This app is written in C# 5.0 and as such depends on .Net 4.5 and the corresponding WPF version for the time being (pull requests to change this are welcome.) 
 
-It depends on two major libraries: [YAMP (Yet Another Math Parser)](https://github.com/FlorianRappl/YAMP) and [ReactiveUI](https://github.com/reactiveui/ReactiveUI). Many thanks to Paul Betts and FlorianRappl for their work that I've been able to use. 
+It depends on two major libraries(via Nuget): [YAMP (Yet Another Math Parser)](https://github.com/FlorianRappl/YAMP) and [ReactiveUI](https://github.com/reactiveui/ReactiveUI). Many thanks to Paul Betts and FlorianRappl for their work that I've been able to use. 
