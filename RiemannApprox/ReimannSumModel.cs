@@ -28,7 +28,7 @@ namespace RiemannApprox
             set
             {
                 //Set a rectangle limit to keep from getting the UI locked up. TODO: Make this able to be disabled.
-                value = Math.Min(value.Value, 100000);
+                //value = Math.Min(value.Value, 100000);
                 this.RaiseAndSetIfChanged(ref _numRectangles, value);
             }
         }
@@ -81,48 +81,9 @@ namespace RiemannApprox
                 x => x.numRectangles,
                 x => x.StartingVal,
                 x => x.EndVal,
-
                 (fx, rects, start, end) =>
                 {
-                    //Limit the scope of the parseHolders
-                    {
-                        double parseHolder;
-                        bool numsReady = rects.Value.HasValue
-                            && TryParseEx(start.Value, out parseHolder)
-                            && TryParseEx(end.Value, out parseHolder)
-                            && !String.IsNullOrWhiteSpace(fx.Value);
-
-                        if (!numsReady)
-                        {
-                            return false;
-                        }
-                    }
-                    //Don't try to parse if we don't need to. Reduce execption handling
-                    try
-                    {
-                        ScalarValue x = new ScalarValue(10);
-                        //Replace any x's that are not part of max or exp fucntion names. 
-                        string fxl = Regex.Replace(fx.Value, @"(?<!ma|e)x(?!p)", "q", RegexOptions.IgnoreCase);
-                        //q is used to make sure that the multithreading of listening vs evaluation doesn't mess up the parser. The parser has a global context.
-                        Parser.AddVariable("q", x);
-                        string func = cleanFunc(fxl);
-                        Console.WriteLine(func);
-                        var junk = (ScalarValue)Parser.Parse(func).Execute();
-                    }
-                    catch (YAMPException ex)
-                    {
-                        return false;
-                    }
-                    catch (InvalidCastException ex)
-                    {
-                        return false;
-                    }
-                    finally
-                    {
-                        Parser.RemoveVariable("q");
-                    }
-                    return true;
-
+                    return CheckRun(fx.Value, rects.Value, start.Value, end.Value);
                 });
             var runForVal = this.WhenAny(
                 x => x.Function,
@@ -148,9 +109,10 @@ namespace RiemannApprox
                     });
                 });
 
-            TimeSpan halfSecond = new TimeSpan(0, 0, 0, 0, 200);
+            TimeSpan halfSecond = new TimeSpan(0, 0, 0, 0, 500);
             var validValues = Observable.Zip(canRun, runForVal, (x, y) => new { CanRun = x, Run = y })
-                .Where(x => x.CanRun).Throttle(halfSecond)
+                .Where(x => x.CanRun)
+                .Throttle(halfSecond)
                 //Run the calculations in the Task pool(i.e. background)
                 .ObserveOn(TaskPoolScheduler.Default)
                 .Select(x => x.Run.Value)
@@ -163,6 +125,53 @@ namespace RiemannApprox
                 MidpointSum = x.Item3;
                 TrapezoidalSum = x.Item4;
             });
+        }
+
+        private bool CheckRun(string fx, int? rects,  string start, string end)
+        {
+            //Limit the scope of the parseHolders
+            {
+                double parseHolder;
+                bool numsReady = rects.HasValue
+                    && TryParseEx(start, out parseHolder)
+                    && TryParseEx(end, out parseHolder)
+                    && !String.IsNullOrWhiteSpace(fx);
+
+                if (!numsReady)
+                {
+                    return false;
+                }
+            }
+            //Don't try to parse if we don't need to. Reduce execption handling
+            try
+            {
+                ScalarValue x = new ScalarValue(10);
+                //Replace any x's that are not part of max or exp fucntion names. 
+                string fxl = Regex.Replace(fx, @"(?<!ma|e)x(?!p)", "q", RegexOptions.IgnoreCase);
+                //q is used to make sure that the multithreading of listening vs evaluation doesn't mess up the parser. The parser has a global context.
+                Parser.AddVariable("q", x);
+                string func = cleanFunc(fxl);
+                Console.WriteLine(func);
+                var junk = (ScalarValue)Parser.Parse(func).Execute();
+            }
+            catch (YAMPException ex)
+            {
+                return false;
+            }
+            catch (InvalidCastException ex)
+            {
+                return false;
+            }
+
+            catch
+            {
+                return false;
+            }
+            finally
+            {
+                Parser.RemoveVariable("q");
+            }
+            return true;
         }
         private static object _countLock = new object();
         private static int locked = 0;
@@ -233,14 +242,14 @@ namespace RiemannApprox
             //Note that if you add functions to the parser, you'll need to make sure that they get properly cleaned (or not) here.
 
             //Match any x that is not part of the calls to 'max' or 'exp' and surround it with parens
-            func = Regex.Replace(func, @"(?<!ma|e)(x)(?![pP])", "($1)", RegexOptions.IgnoreCase);
+            func = Regex.Replace(func, @"(?<!ma|e)(x)(?!p)", "($1)", RegexOptions.IgnoreCase);
             //Match any q that is not part of the calls to 'sqrt'
             func = Regex.Replace(func, @"(?<!s)(q)(?!rt)", "($1)", RegexOptions.IgnoreCase); 
             //Take any parens and make sure that they get multiplied by numbers and parens next to them
             func = Regex.Replace(func, @"(\d)\(", "$1*(");
             func = Regex.Replace(func, @"\)(\d)", ")*$1");
             //Take two paren groups and make sure that they get multiplied properly
-            func = func.Replace(")(", ")*(");
+            func = Regex.Replace(func, @"\)\s*\(", ")*(");
             //Take any function or constant that has parens in front of it (but not behind) and multiply it.
             func = Regex.Replace(func, @"\)(\p{L}+)", ")*$1");
             //take any function and have it be multiplied by numbers next to it. 
@@ -251,6 +260,8 @@ namespace RiemannApprox
         
         private static double getRiemannSum(int rects, double start, double end, double deltaX, string func, SumType sumSide)
         {
+            var watch = new System.Diagnostics.Stopwatch();
+            watch.Start();
             ScalarValue x = new ScalarValue(0);
             Parser.AddVariable("x", x);
             var c = Parser.Parse(func);
@@ -291,7 +302,7 @@ namespace RiemannApprox
                     x.Value = end;
                     s = (ScalarValue)c.Execute();
                     sum += s.Value;
-                    sum /= 2;
+                    sum *= 0.5;
                 }
             }
             catch (YAMP.YAMPException ex)
@@ -303,7 +314,8 @@ namespace RiemannApprox
             {
                 Parser.RemoveVariable("x");
             }
-            Console.WriteLine(sum * deltaX);
+            Console.WriteLine(watch.Elapsed);
+            //Console.WriteLine(sum * deltaX);
             return sum * deltaX;
         }
         enum SumType
@@ -313,7 +325,5 @@ namespace RiemannApprox
             Middle,
             Trapezoidal,
         }
-
-
     }
 }
