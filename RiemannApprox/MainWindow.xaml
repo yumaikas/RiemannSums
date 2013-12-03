@@ -1,0 +1,45 @@
+﻿<Window x:Class="RiemannApprox.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Riemann Sum calculator" Width="Auto" Height="Auto" SizeToContent="WidthAndHeight">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <!--This is here in case of needing to add a menu to the UI later-->
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <StackPanel Grid.Row="1" Name="main" Margin="5">
+            
+            <StackPanel Orientation="Horizontal" Margin="2.5">
+                <Label Content="F(x)"/><TextBox Name="formulaBox" MinWidth="400" Text="{Binding Path=Function, UpdateSourceTrigger=PropertyChanged}"></TextBox>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Margin="2.5">
+                <Label>Number of rectangles to use:</Label>
+                <TextBox Name="rectBox" MinWidth="40" Text="{Binding Path=numRectangles, UpdateSourceTrigger=PropertyChanged}"></TextBox>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Margin="2.5">
+                <Label>Integrate F(x) from</Label>
+                <TextBox MinWidth="30" Text="{Binding Path=StartingVal, UpdateSourceTrigger=PropertyChanged}" ></TextBox>
+                <Label>to</Label>
+                <TextBox MinWidth="30" Text="{Binding Path=EndVal, UpdateSourceTrigger=PropertyChanged}"></TextBox>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Margin="5,0,0,0">
+                <Label>Area under curve according to Riemann left sum:</Label>
+                <Label FontWeight="Bold" Content="{Binding Path=LeftSum}"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Margin="5,0,0,0">
+                <Label>Area under curve according to Riemann right sum:</Label>
+                <Label FontWeight="Bold" Content="{Binding Path=RightSum}"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Margin="5,0,0,0" >
+                <Label>Area under curve according to middle sum:</Label>
+                <Label FontWeight="Bold" Content="{Binding Path=MidpointSum}"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Margin="5,0,0,0">
+                <Label>Area under curve according to trapezoidal sum:</Label>
+                <Label FontWeight="Bold" Content="{Binding Path=TrapezoidalSum}"/>
+            </StackPanel>
+        </StackPanel>
+    </Grid>
+</Window>
