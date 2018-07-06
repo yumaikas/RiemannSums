@@ -1,4 +1,4 @@
-##An easy use Reimann Sum calculator
+## An easy use Reimann Sum calculator
 
 This app is a Reimann Sum calculator. It has been done in collaboration with the work of [NSPostWhenIdle](https://github.com/NSPostWhenIdle/Reimann-Sums), although it hasn't been on github until now. The apps aren't identical, but serve the same purpose. 
 
